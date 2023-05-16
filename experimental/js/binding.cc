@@ -37,7 +37,7 @@ class EXRLoader {
     }
 
     if (exr_version.multipart) {
-      printf("multipart\n");
+      // printf("multipart\n");
 
       EXRHeader **exr_headers;  // list of EXRHeader pointers.
       int num_exr_headers;
@@ -59,15 +59,15 @@ class EXRLoader {
 
       std::vector<std::string> layer_names;
       tinyexr::GetLayers(selectedEXRHeader, layer_names);
-      for (size_t i = 0; i < layer_names.size(); i++) {
-        printf("layer name = %s\n", layer_names[i].c_str());
-      }
+      // for (size_t i = 0; i < layer_names.size(); i++) {
+      //   printf("layer name = %s\n", layer_names[i].c_str());
+      // }
 
       std::vector<tinyexr::LayerChannel> channels;
       tinyexr::ChannelsInLayer(selectedEXRHeader, "", channels);
-      for (size_t i = 0; i < channels.size(); i++) {
-        printf("channel name = %s\n", channels[i].name.c_str());
-      }
+      // for (size_t i = 0; i < channels.size(); i++) {
+      //   printf("channel name = %s\n", channels[i].name.c_str());
+      // }
 
       // Read HALF channel as FLOAT.
       for (int i = 0; i < selectedEXRHeader.num_channels; i++) {
