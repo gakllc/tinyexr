@@ -16,7 +16,7 @@ class EXRLoader {
   /// `binary` is the buffer for EXR binary(e.g. buffer read by fs.readFileSync)
   /// std::string can be used as UInt8Array in JS layer.
   ///
-  EXRLoader(const std::string &binary) {
+  EXRLoader(const std::string &binary, const std::string &partName) {
     const unsigned char *binary_ptr =
         reinterpret_cast<const unsigned char *>(binary.data());
     const float *ptr = reinterpret_cast<const float *>(binary.data());
@@ -37,8 +37,6 @@ class EXRLoader {
     }
 
     if (exr_version.multipart) {
-      // printf("multipart\n");
-
       EXRHeader **exr_headers;  // list of EXRHeader pointers.
       int num_exr_headers;
       const char *err = nullptr;
@@ -55,7 +53,23 @@ class EXRLoader {
         return;
       }
 
-      EXRHeader selectedEXRHeader = *exr_headers[0];
+      size_t partIdx = 0;
+      if (partName != "") {
+        int i = 0;
+        for (; i < num_exr_headers; i++) {
+          if (std::string(exr_headers[i]->name) == partName) {
+            partIdx = i;
+            break;
+          }
+        }
+        if (i == num_exr_headers) {
+          fprintf(stderr, "Cannot find part %s\n", partName.c_str());
+          error_ = std::string("Cannot find part ") + partName;
+          result_ = -1;
+          return;
+        }
+      }
+      EXRHeader selectedEXRHeader = *exr_headers[partIdx];
 
       std::vector<std::string> layer_names;
       tinyexr::GetLayers(selectedEXRHeader, layer_names);
@@ -91,7 +105,7 @@ class EXRLoader {
         return;
       }
 
-      EXRImage selectedEXRImage = exr_images[0];
+      EXRImage selectedEXRImage = exr_images[partIdx];
 
       int idxR = -1;
       int idxG = -1;
@@ -189,7 +203,7 @@ EMSCRIPTEN_BINDINGS(stl_wrappters) { register_vector<float>("VectorFloat"); }
 
 EMSCRIPTEN_BINDINGS(tinyexr_module) {
   class_<EXRLoader>("EXRLoader")
-      .constructor<const std::string &>()
+      .constructor<const std::string &, const std::string &>()
       .function("getBytes", &EXRLoader::getBytes)
       .function("ok", &EXRLoader::ok)
       .function("error", &EXRLoader::error)
