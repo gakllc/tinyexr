@@ -56,7 +56,7 @@ class EXRLoader {
       for (int i = 0; i < num_exr_headers; i++) {
         for (int c = 0; c < exr_headers[i]->num_channels; c++) {
           if (exr_headers[i]->pixel_types[c] == TINYEXR_PIXELTYPE_HALF) {
-            exr_headers[i]->requested_pixel_types[c] = TINYEXR_PIXELTYPE_FLOAT;
+            exr_headers[i]->requested_pixel_types[c] = TINYEXR_PIXELTYPE_HALF;
           }
         }
       }
@@ -75,7 +75,6 @@ class EXRLoader {
         FreeEXRErrorMessage(err);  // free's buffer for an error message
         return;
       }
-
 
       for (int i = 0; i < num_exr_headers; i++) {
         EXRHeader *selectedEXRHeader = exr_headers[i];
@@ -118,27 +117,29 @@ class EXRLoader {
 
         const size_t pixel_size = static_cast<size_t>(selectedEXRImage.width) *
                                   static_cast<size_t>(selectedEXRImage.height);
-        const size_t nbytes = pixel_size * sizeof(float) * 4;
+        const size_t nbytes = pixel_size * sizeof(uint16_t) * 4;
         std::vector<unsigned char> image(nbytes);
-        float *float_image = reinterpret_cast<float *>(&image.at(0));
+        uint16_t *half_image = reinterpret_cast<uint16_t *>(&image.at(0));
         for (size_t i = 0; i < pixel_size; i++) {
-          float_image[4 * i + 0] =
-              reinterpret_cast<float **>(selectedEXRImage.images)[idxR][i];
-          float_image[4 * i + 1] =
-              reinterpret_cast<float **>(selectedEXRImage.images)[idxG][i];
-          float_image[4 * i + 2] =
-              reinterpret_cast<float **>(selectedEXRImage.images)[idxB][i];
+          half_image[4 * i + 0] =
+              reinterpret_cast<uint16_t **>(selectedEXRImage.images)[idxR][i];
+          half_image[4 * i + 1] =
+              reinterpret_cast<uint16_t **>(selectedEXRImage.images)[idxG][i];
+          half_image[4 * i + 2] =
+              reinterpret_cast<uint16_t **>(selectedEXRImage.images)[idxB][i];
           if (idxA != -1) {
-            float_image[4 * i + 3] =
-                reinterpret_cast<float **>(selectedEXRImage.images)[idxA][i];
+            half_image[4 * i + 3] =
+                reinterpret_cast<uint16_t **>(selectedEXRImage.images)[idxA][i];
           } else {
-            float_image[4 * i + 3] = 1.0;
+            half_image[4 * i + 3] = 1.0;
           }
         }
 
-        images_and_names_.emplace_back(selectedEXRHeader->name, std::move(image));
-        sizes_and_names_.emplace_back(selectedEXRHeader->name,
-                                      std::make_pair(selectedEXRImage.width, selectedEXRImage.height));
+        images_and_names_.emplace_back(selectedEXRHeader->name,
+                                       std::move(image));
+        sizes_and_names_.emplace_back(
+            selectedEXRHeader->name,
+            std::make_pair(selectedEXRImage.width, selectedEXRImage.height));
       }
       num_exr_headers_ = num_exr_headers;
       exr_headers_ = exr_headers;
@@ -149,7 +150,6 @@ class EXRLoader {
       }
       return;
     }
-
 
     // SINGLE PART
     num_exr_headers_ = 1;
@@ -188,7 +188,6 @@ class EXRLoader {
     }
   }
 
-
   ~EXRLoader() {
     if (exr_headers_) {
       for (int i = 0; i < num_exr_headers_; i++) {
@@ -199,12 +198,12 @@ class EXRLoader {
   }
 
   // Return as memory views
-  emscripten::val getBytes(const std::string &part_name) const {    
+  emscripten::val getBytes(const std::string &part_name) const {
     for (size_t i = 0; i < images_and_names_.size(); i++) {
       if (images_and_names_[i].first == part_name) {
         const auto &image = images_and_names_[i].second;
-        return emscripten::val(
-            emscripten::typed_memory_view(image.size() / sizeof(float), (float*)image.data()));
+        return emscripten::val(emscripten::typed_memory_view(
+            image.size() / sizeof(uint16_t), (uint16_t *)image.data()));
       }
     }
     return emscripten::val::null();
@@ -214,7 +213,7 @@ class EXRLoader {
 
   const std::string error() const { return error_; }
 
-  int width(const std::string &part_name) const { 
+  int width(const std::string &part_name) const {
     for (size_t i = 0; i < sizes_and_names_.size(); i++) {
       if (sizes_and_names_[i].first == part_name) {
         return sizes_and_names_[i].second.first;
@@ -241,8 +240,9 @@ class EXRLoader {
   }
 
  private:
-  std::vector<std::pair<std::string, std::vector<unsigned char>>> images_and_names_;
-  std::vector<std::pair<std::string, std::pair<int, int>>> sizes_and_names_;
+  std::vector<std::pair<std::string, std::vector<unsigned char> > >
+      images_and_names_;
+  std::vector<std::pair<std::string, std::pair<int, int> > > sizes_and_names_;
 
   int result_;
   std::string error_;
@@ -253,6 +253,7 @@ class EXRLoader {
 // Register STL
 EMSCRIPTEN_BINDINGS(stl_wrappters) {
   register_vector<float>("VectorFloat");
+  register_vector<uint16_t>("VectorUInt16");
   // register_vector<std::string>("VectorString");
   value_array<std::vector<std::string> >("VectorString");
 }
