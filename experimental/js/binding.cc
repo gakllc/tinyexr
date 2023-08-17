@@ -40,6 +40,8 @@ class EXRLoader {
       int num_exr_headers;
       const char *err = nullptr;
 
+      is_multipart_ = true;
+
       // Memory for EXRHeader is allocated inside of
       // ParseEXRMultipartHeaderFromFile,
       result_ = ParseEXRMultipartHeaderFromMemory(
@@ -209,6 +211,8 @@ class EXRLoader {
     return emscripten::val::null();
   }
 
+  emscripten::val isMultipart() const { return emscripten::val(is_multipart_); }
+
   bool ok() const { return (TINYEXR_SUCCESS == result_); }
 
   const std::string error() const { return error_; }
@@ -248,6 +252,7 @@ class EXRLoader {
   std::string error_;
   size_t num_exr_headers_;
   EXRHeader **exr_headers_;
+  bool is_multipart_;
 };
 
 // Register STL
@@ -263,6 +268,7 @@ EMSCRIPTEN_BINDINGS(tinyexr_module) {
       .constructor<const std::string &>()
       .function("ok", &EXRLoader::ok)
       .function("error", &EXRLoader::error)
+      .function("isMultipart", &EXRLoader::isMultipart)
       .function("partNames", &EXRLoader::partNames)
       .function("width", &EXRLoader::width)
       .function("height", &EXRLoader::height)
